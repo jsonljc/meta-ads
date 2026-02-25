@@ -10,7 +10,9 @@ import type {
   MetricSnapshot,
   StageMetrics,
   TimeRange,
-} from "../types.js";
+} from "../../core/types.js";
+import type { PlatformType } from "../types.js";
+import { AbstractPlatformClient } from "../base-client.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -78,11 +80,13 @@ class RateLimiter {
 // Meta API Client
 // ---------------------------------------------------------------------------
 
-export class MetaApiClient {
+export class MetaApiClient extends AbstractPlatformClient {
+  readonly platform: PlatformType = "meta";
   private config: Required<MetaApiConfig>;
   private rateLimiter: RateLimiter;
 
   constructor(config: MetaApiConfig) {
+    super();
     this.config = {
       accessToken: config.accessToken,
       apiVersion: config.apiVersion ?? DEFAULT_API_VERSION,
@@ -110,23 +114,6 @@ export class MetaApiClient {
 
     // Aggregate all rows in the period (there may be multiple if breakdowns exist)
     return this.normalizeRows(rows, entityId, entityLevel, timeRange, funnel);
-  }
-
-  /**
-   * Fetch snapshots for two comparison periods in parallel.
-   */
-  async fetchComparisonSnapshots(
-    entityId: string,
-    entityLevel: EntityLevel,
-    current: TimeRange,
-    previous: TimeRange,
-    funnel: FunnelSchema
-  ): Promise<{ current: MetricSnapshot; previous: MetricSnapshot }> {
-    const [currentSnap, previousSnap] = await Promise.all([
-      this.fetchSnapshot(entityId, entityLevel, current, funnel),
-      this.fetchSnapshot(entityId, entityLevel, previous, funnel),
-    ]);
-    return { current: currentSnap, previous: previousSnap };
   }
 
   // -------------------------------------------------------------------------

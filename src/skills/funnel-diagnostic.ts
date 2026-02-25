@@ -1,28 +1,28 @@
-import { MetaApiClient } from "../core/api/client.js";
 import { analyzeFunnel } from "../core/analysis/funnel-walker.js";
 import { buildComparisonPeriods } from "../core/analysis/comparator.js";
-import { commerceFunnel } from "../verticals/commerce/funnel.js";
-import { commerceBenchmarks } from "../verticals/commerce/benchmarks.js";
-import { commerceAdvisors } from "../verticals/commerce/diagnostics.js";
-import { leadgenFunnel, createLeadgenFunnel } from "../verticals/leadgen/funnel.js";
-import { leadgenBenchmarks, createLeadgenBenchmarks } from "../verticals/leadgen/benchmarks.js";
-import { leadgenAdvisors } from "../verticals/leadgen/diagnostics.js";
+import {
+  createPlatformClient,
+  resolveFunnel,
+  resolveBenchmarks,
+} from "../platforms/registry.js";
+import { resolveAdvisors } from "../advisors/registry.js";
 import type {
   DiagnosticResult,
   EntityLevel,
-  FunnelSchema,
   Finding,
   Severity,
-  VerticalBenchmarks,
   VerticalType,
 } from "../core/types.js";
-import type { FindingAdvisor } from "../core/analysis/funnel-walker.js";
+import type { PlatformType, PlatformCredentials } from "../platforms/types.js";
 
 // ---------------------------------------------------------------------------
 // Skill: Funnel Diagnostic
 // ---------------------------------------------------------------------------
 // Entry point for the agent. Takes an ad account (or campaign/adset) and
 // returns a complete funnel diagnostic with actionable findings.
+//
+// Supports all platforms via the platform registry. Defaults to Meta
+// for backward compatibility.
 // ---------------------------------------------------------------------------
 
 export interface FunnelDiagnosticInput {
@@ -32,6 +32,8 @@ export interface FunnelDiagnosticInput {
   accessToken: string;
   /** Defaults to "commerce" */
   vertical?: VerticalType;
+  /** Platform to diagnose (default: "meta") */
+  platform?: PlatformType;
   /** Number of days per comparison period (default 7 = WoW) */
   periodDays?: number;
   /** Reference date for "current" period end. Defaults to yesterday. */
@@ -59,23 +61,26 @@ export async function runFunnelDiagnostic(
     entityLevel = "account",
     accessToken,
     vertical = "commerce",
+    platform = "meta",
     periodDays = 7,
     referenceDate,
     qualifiedLeadActionType,
   } = input;
 
-  // Resolve vertical config
-  const { funnel, benchmarks, advisors } = getVerticalConfig(
-    vertical,
-    qualifiedLeadActionType
-  );
+  // Resolve platform config via registry
+  const credentials = buildCredentials(platform, accessToken);
+  const client = createPlatformClient(credentials);
+  const funnel = resolveFunnel(platform, vertical, { qualifiedLeadActionType });
+  const benchmarks = resolveBenchmarks(platform, vertical, {
+    qualifiedLeadActionType,
+  });
+  const advisors = resolveAdvisors(platform, vertical);
 
   // Build time periods
   const refDate = referenceDate ? new Date(referenceDate) : getYesterday();
   const periods = buildComparisonPeriods(refDate, periodDays);
 
   // Fetch data
-  const client = new MetaApiClient({ accessToken });
   const { current, previous } = await client.fetchComparisonSnapshots(
     entityId,
     entityLevel,
@@ -94,6 +99,9 @@ export async function runFunnelDiagnostic(
     advisors,
   });
 
+  // Tag with platform
+  result.platform = platform;
+
   return result;
 }
 
@@ -104,7 +112,10 @@ export function formatDiagnostic(result: DiagnosticResult): string {
   const lines: string[] = [];
 
   // Header
-  lines.push(`## Funnel Diagnostic: ${result.entityId}`);
+  const platformTag = result.platform
+    ? ` (${result.platform.toUpperCase()})`
+    : "";
+  lines.push(`## Funnel Diagnostic: ${result.entityId}${platformTag}`);
   lines.push(
     `Period: ${result.periods.current.since} to ${result.periods.current.until} vs ${result.periods.previous.since} to ${result.periods.previous.until}`
   );
@@ -116,9 +127,7 @@ export function formatDiagnostic(result: DiagnosticResult): string {
   // Primary KPI
   const kpi = result.primaryKPI;
   const kpiIcon = severityIcon(kpi.severity);
-  lines.push(
-    `### Primary KPI: ${kpi.name} ${kpiIcon}`
-  );
+  lines.push(`### Primary KPI: ${kpi.name} ${kpiIcon}`);
   lines.push(
     `$${kpi.current.toFixed(2)} → was $${kpi.previous.toFixed(2)} (${kpi.deltaPercent > 0 ? "+" : ""}${kpi.deltaPercent.toFixed(1)}% WoW)`
   );
@@ -173,38 +182,23 @@ export function formatDiagnostic(result: DiagnosticResult): string {
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-function getVerticalConfig(
-  vertical: VerticalType,
-  qualifiedLeadActionType?: string
-): {
-  funnel: FunnelSchema;
-  benchmarks: VerticalBenchmarks;
-  advisors: FindingAdvisor[];
-} {
-  switch (vertical) {
-    case "commerce":
-      return {
-        funnel: commerceFunnel,
-        benchmarks: commerceBenchmarks,
-        advisors: commerceAdvisors,
-      };
-    case "leadgen":
-      // Use custom action type if provided, otherwise use defaults
-      if (qualifiedLeadActionType) {
-        return {
-          funnel: createLeadgenFunnel(qualifiedLeadActionType),
-          benchmarks: createLeadgenBenchmarks(qualifiedLeadActionType),
-          advisors: leadgenAdvisors,
-        };
-      }
-      return {
-        funnel: leadgenFunnel,
-        benchmarks: leadgenBenchmarks,
-        advisors: leadgenAdvisors,
-      };
-    case "brand":
+/**
+ * Build minimal credentials from accessToken + platform.
+ * For Meta and TikTok, accessToken is sufficient for the basic case.
+ * For Google, the full credentials should be provided via the config system.
+ */
+function buildCredentials(
+  platform: PlatformType,
+  accessToken: string
+): PlatformCredentials {
+  switch (platform) {
+    case "meta":
+      return { platform: "meta", accessToken };
+    case "tiktok":
+      return { platform: "tiktok", accessToken, appId: "" };
+    case "google":
       throw new Error(
-        `Vertical "brand" is not yet implemented. Currently supported: commerce, leadgen.`
+        "Google Ads requires full OAuth2 credentials. Use the multi-platform diagnostic skill with an AccountConfig instead."
       );
   }
 }

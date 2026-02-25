@@ -1,5 +1,5 @@
 import type { VerticalBenchmarks, StageBenchmark } from "../../core/types.js";
-import { DEFAULT_QUALIFIED_LEAD_ACTION } from "./funnel.js";
+import { DEFAULT_QUALIFIED_LEAD_ACTION } from "../../platforms/meta/funnels/leadgen.js";
 
 // ---------------------------------------------------------------------------
 // Lead Generation Default Benchmarks

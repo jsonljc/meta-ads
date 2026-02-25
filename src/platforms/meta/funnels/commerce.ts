@@ -1,9 +1,9 @@
-import type { FunnelSchema } from "../../core/types.js";
+import type { FunnelSchema } from "../../../core/types.js";
 
 // ---------------------------------------------------------------------------
-// Commerce Funnel Schema
+// Meta Commerce Funnel Schema
 // ---------------------------------------------------------------------------
-// The standard e-commerce journey:
+// The standard e-commerce journey on Meta:
 // Impression → Link Click → Landing Page View → View Content → Add to Cart → Purchase
 // ---------------------------------------------------------------------------
 
