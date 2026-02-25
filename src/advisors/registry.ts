@@ -1,0 +1,87 @@
+import type { VerticalType } from "../core/types.js";
+import type { PlatformType } from "../platforms/types.js";
+import type { FindingAdvisor } from "../core/analysis/funnel-walker.js";
+
+// Shared advisors
+import {
+  creativeFatigueAdvisor,
+  leadgenCreativeFatigueAdvisor,
+  auctionCompetitionAdvisor,
+  leadgenAuctionCompetitionAdvisor,
+} from "./shared/index.js";
+
+// Platform-specific advisors
+import { landingPageAdvisor } from "./platform/meta/index.js";
+
+// Vertical-specific advisors
+import {
+  productPageAdvisor,
+  checkoutFrictionAdvisor,
+} from "./vertical/commerce/index.js";
+import {
+  leadQualityAdvisor,
+  formConversionAdvisor,
+  qualifiedCostAdvisor,
+} from "./vertical/leadgen/index.js";
+
+// ---------------------------------------------------------------------------
+// Advisor Registry
+// ---------------------------------------------------------------------------
+// Resolves the correct set of advisors based on platform + vertical.
+//
+// The advisor set is composed of three layers:
+// 1. Shared advisors (universal — creative fatigue, auction competition)
+// 2. Platform-specific advisors (e.g., Meta landing page)
+// 3. Vertical-specific advisors (e.g., commerce checkout friction)
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve the correct advisors for a given platform + vertical combination.
+ *
+ * Examples:
+ * - Meta + commerce → 5 advisors (2 shared + 1 platform + 2 vertical)
+ * - Google + commerce → 2 advisors (2 shared only)
+ * - Meta + leadgen → 5 advisors (2 shared + 3 vertical)
+ * - TikTok + commerce → 4 advisors (2 shared + 2 vertical)
+ */
+export function resolveAdvisors(
+  platform: PlatformType,
+  vertical: VerticalType
+): FindingAdvisor[] {
+  const advisors: FindingAdvisor[] = [];
+
+  // 1. Shared advisors (all platforms)
+  if (vertical === "leadgen") {
+    advisors.push(leadgenCreativeFatigueAdvisor);
+    advisors.push(leadgenAuctionCompetitionAdvisor);
+  } else {
+    advisors.push(creativeFatigueAdvisor);
+    advisors.push(auctionCompetitionAdvisor);
+  }
+
+  // 2. Platform-specific advisors
+  if (platform === "meta") {
+    if (vertical === "commerce") {
+      // Landing page advisor requires the LPV stage (Meta-only)
+      advisors.push(landingPageAdvisor);
+    }
+  }
+  // Google and TikTok have no platform-specific advisors yet
+
+  // 3. Vertical-specific advisors
+  if (vertical === "commerce") {
+    // Product page advisor works on Meta + TikTok (both have VC→ATC stages)
+    // but not on Google (which has no view_content stage)
+    if (platform === "meta" || platform === "tiktok") {
+      advisors.push(productPageAdvisor);
+      advisors.push(checkoutFrictionAdvisor);
+    }
+  } else if (vertical === "leadgen") {
+    // Leadgen advisors apply to all platforms that have lead + qualified_lead stages
+    advisors.push(leadQualityAdvisor);
+    advisors.push(formConversionAdvisor);
+    advisors.push(qualifiedCostAdvisor);
+  }
+
+  return advisors;
+}

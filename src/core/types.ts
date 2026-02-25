@@ -7,12 +7,12 @@ export interface FunnelStage {
   name: string;
   /** The Meta actions[] action_type, or a top-level field like 'impressions' */
   metric: string;
-  /** Where to find this metric in the API response */
-  metricSource: "actions" | "top_level";
+  /** Where to find this metric in the API response (e.g. "actions", "top_level", "metrics") */
+  metricSource: string;
   /** The cost metric for this stage (null if not directly billable) */
   costMetric: string | null;
   /** Where to find the cost metric */
-  costMetricSource: "cost_per_action_type" | "top_level" | null;
+  costMetricSource: string | null;
 }
 
 export interface FunnelSchema {
@@ -103,6 +103,8 @@ export interface FunnelDropoff {
 export interface DiagnosticResult {
   vertical: VerticalType;
   entityId: string;
+  /** Platform that generated this result (e.g. "meta", "google", "tiktok") */
+  platform?: string;
   periods: ComparisonPeriods;
   spend: { current: number; previous: number };
   /** Primary KPI summary */
