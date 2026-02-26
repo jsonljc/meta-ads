@@ -19,6 +19,9 @@ export type {
   ComparisonPeriods,
   VerticalBenchmarks,
   StageBenchmark,
+  SubEntityBreakdown,
+  DiagnosticContext,
+  EconomicImpact,
 } from "./core/types.js";
 
 // Analysis engine
@@ -28,6 +31,13 @@ export { buildComparisonPeriods, buildTrailingPeriods } from "./core/analysis/co
 export { isSignificantChange, zScore, percentChange } from "./core/analysis/significance.js";
 export { accountVariance, getEffectiveVariance } from "./core/analysis/thresholds.js";
 export type { AccountHistory } from "./core/analysis/thresholds.js";
+export {
+  computeStageEconomicImpact,
+  computeDropoffEconomicImpact,
+  buildElasticityRanking,
+} from "./core/analysis/economic-impact.js";
+export { buildDiagnosticContext } from "./core/analysis/context-builder.js";
+export type { ContextBuilderOptions } from "./core/analysis/context-builder.js";
 
 // Platform types
 export type {
@@ -84,6 +94,7 @@ export {
   auctionCompetitionAdvisor,
   leadgenAuctionCompetitionAdvisor,
   createAuctionCompetitionAdvisor,
+  creativeExhaustionAdvisor,
 } from "./advisors/shared/index.js";
 
 // Advisors — Platform-specific
@@ -97,6 +108,13 @@ export {
   qualifiedCostAdvisor,
 } from "./advisors/vertical/leadgen/index.js";
 
+// Advisors — Structural
+export {
+  adsetFragmentationAdvisor,
+  budgetSkewAdvisor,
+  learningInstabilityAdvisor,
+} from "./advisors/structural/index.js";
+
 // Advisor registry
 export { resolveAdvisors } from "./advisors/registry.js";
 
@@ -107,10 +125,12 @@ export type {
   CrossPlatformFinding,
   CrossPlatformSignalType,
   BudgetRecommendation,
+  PortfolioAction,
 } from "./orchestrator/types.js";
 export { runMultiPlatformDiagnostic } from "./orchestrator/runner.js";
 export { correlate } from "./orchestrator/correlator.js";
 export { generateExecutiveSummary } from "./orchestrator/summary.js";
+export { generatePortfolioActions } from "./orchestrator/portfolio-actions.js";
 
 // Config
 export type {

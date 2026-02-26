@@ -23,6 +23,25 @@ export function formatMultiPlatformDiagnostic(
   // Executive summary first
   lines.push(result.executiveSummary);
   lines.push("");
+
+  // Portfolio actions (if available)
+  if (result.portfolioActions && result.portfolioActions.length > 0) {
+    lines.push("---");
+    lines.push("");
+    lines.push("## Portfolio Actions");
+    for (const action of result.portfolioActions) {
+      const risk = `[${action.riskLevel.toUpperCase()} RISK]`;
+      const confidence = `${(action.confidenceScore * 100).toFixed(0)}%`;
+      const revenue = action.estimatedRevenueRecovery > 0
+        ? ` | est. $${action.estimatedRevenueRecovery.toFixed(0)} recovery`
+        : "";
+      lines.push(
+        `${action.priority}. ${risk} ${action.action} (${confidence} confidence${revenue})`
+      );
+    }
+    lines.push("");
+  }
+
   lines.push("---");
   lines.push("");
 

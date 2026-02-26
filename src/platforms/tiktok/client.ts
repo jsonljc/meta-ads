@@ -8,6 +8,7 @@ import type {
   FunnelSchema,
   MetricSnapshot,
   StageMetrics,
+  SubEntityBreakdown,
   TimeRange,
 } from "../../core/types.js";
 import type { PlatformType } from "../types.js";
@@ -116,6 +117,55 @@ export class TikTokAdsClient extends AbstractPlatformClient {
     }
 
     return this.normalizeRows(rows, entityId, entityLevel, timeRange, funnel);
+  }
+
+  // -------------------------------------------------------------------------
+  // Public: fetch sub-entity breakdowns for structural analysis
+  // -------------------------------------------------------------------------
+
+  async fetchSubEntityBreakdowns(
+    entityId: string,
+    _entityLevel: EntityLevel,
+    timeRange: TimeRange,
+    _funnel: FunnelSchema
+  ): Promise<SubEntityBreakdown[]> {
+    const requestBody = {
+      advertiser_id: entityId,
+      report_type: "BASIC",
+      data_level: "AUCTION_ADGROUP",
+      dimensions: ["adgroup_id"],
+      metrics: ["spend", "conversion", "complete_payment"],
+      start_date: timeRange.since,
+      end_date: timeRange.until,
+      page: 1,
+      page_size: 1000,
+    };
+
+    const breakdowns: SubEntityBreakdown[] = [];
+
+    try {
+      const response = await this.requestWithRetry(requestBody);
+
+      for (const row of response.data.list) {
+        const spend = parseFloat(row.metrics.spend ?? "0");
+        const conversions =
+          parseInt(row.metrics.complete_payment ?? "0", 10) +
+          parseInt(row.metrics.conversion ?? "0", 10);
+
+        breakdowns.push({
+          entityId: row.dimensions.adgroup_id ?? "",
+          entityLevel: "adset", // adgroup maps to adset
+          spend,
+          conversions,
+          daysSinceLastEdit: null,
+          inLearningPhase: false, // Would need separate adgroup GET call
+        });
+      }
+    } catch {
+      // Gracefully return empty on failure
+    }
+
+    return breakdowns;
   }
 
   // -------------------------------------------------------------------------

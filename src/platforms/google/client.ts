@@ -10,6 +10,7 @@ import type {
   FunnelSchema,
   MetricSnapshot,
   StageMetrics,
+  SubEntityBreakdown,
   TimeRange,
 } from "../../core/types.js";
 import type { PlatformType } from "../types.js";
@@ -109,6 +110,44 @@ export class GoogleAdsClient extends AbstractPlatformClient {
     }
 
     return this.normalizeRows(rows, entityId, entityLevel, timeRange, funnel);
+  }
+
+  // -------------------------------------------------------------------------
+  // Public: fetch sub-entity breakdowns for structural analysis
+  // -------------------------------------------------------------------------
+
+  async fetchSubEntityBreakdowns(
+    entityId: string,
+    _entityLevel: EntityLevel,
+    timeRange: TimeRange,
+    _funnel: FunnelSchema
+  ): Promise<SubEntityBreakdown[]> {
+    const customerId = entityId.replace(/-/g, "");
+    const query = `SELECT ad_group.id, ad_group.status, metrics.cost_micros, metrics.conversions FROM ad_group WHERE segments.date BETWEEN '${timeRange.since}' AND '${timeRange.until}' AND ad_group.status = 'ENABLED'`;
+
+    const breakdowns: SubEntityBreakdown[] = [];
+
+    try {
+      const rows = await this.executeQuery(customerId, query);
+
+      for (const row of rows) {
+        const spend = parseInt(row.metrics?.costMicros ?? "0", 10) / 1_000_000;
+        const conversions = row.metrics?.conversions ?? 0;
+
+        breakdowns.push({
+          entityId: String(row.adGroup?.id ?? ""),
+          entityLevel: "adset", // ad_group maps to adset
+          spend,
+          conversions,
+          daysSinceLastEdit: null, // Not available via Google Ads API easily
+          inLearningPhase: false, // No Google equivalent
+        });
+      }
+    } catch {
+      // Gracefully return empty on failure
+    }
+
+    return breakdowns;
   }
 
   // -------------------------------------------------------------------------

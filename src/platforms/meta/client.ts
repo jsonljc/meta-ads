@@ -9,6 +9,7 @@ import type {
   FunnelSchema,
   MetricSnapshot,
   StageMetrics,
+  SubEntityBreakdown,
   TimeRange,
 } from "../../core/types.js";
 import type { PlatformType } from "../types.js";
@@ -114,6 +115,85 @@ export class MetaApiClient extends AbstractPlatformClient {
 
     // Aggregate all rows in the period (there may be multiple if breakdowns exist)
     return this.normalizeRows(rows, entityId, entityLevel, timeRange, funnel);
+  }
+
+  // -------------------------------------------------------------------------
+  // Public: fetch sub-entity breakdowns for structural analysis
+  // -------------------------------------------------------------------------
+
+  async fetchSubEntityBreakdowns(
+    entityId: string,
+    _entityLevel: EntityLevel,
+    timeRange: TimeRange,
+    _funnel: FunnelSchema
+  ): Promise<SubEntityBreakdown[]> {
+    const params = new URLSearchParams({
+      fields: [
+        "id",
+        "status",
+        "effective_status",
+        "daily_budget",
+        `insights.time_range(${JSON.stringify({ since: timeRange.since, until: timeRange.until })})` +
+          "{spend,actions}",
+      ].join(","),
+      access_token: this.config.accessToken,
+      limit: "500",
+    });
+
+    const url = `${BASE_URL}/${this.config.apiVersion}/${entityId}/adsets?${params}`;
+    const breakdowns: SubEntityBreakdown[] = [];
+
+    try {
+      await this.rateLimiter.acquire();
+      const res = await fetch(url);
+      if (!res.ok) return breakdowns;
+
+      const data = (await res.json()) as {
+        data: Array<{
+          id: string;
+          status: string;
+          effective_status: string;
+          daily_budget?: string;
+          insights?: {
+            data: Array<{
+              spend: string;
+              actions?: Array<{ action_type: string; value: string }>;
+            }>;
+          };
+        }>;
+      };
+
+      for (const adset of data.data) {
+        if (adset.effective_status !== "ACTIVE") continue;
+
+        const insightsRow = adset.insights?.data?.[0];
+        const spend = parseFloat(insightsRow?.spend ?? "0");
+        const conversions =
+          insightsRow?.actions?.reduce((sum, a) => {
+            if (
+              a.action_type === "purchase" ||
+              a.action_type === "lead" ||
+              a.action_type === "complete_registration"
+            ) {
+              return sum + parseInt(a.value, 10);
+            }
+            return sum;
+          }, 0) ?? 0;
+
+        breakdowns.push({
+          entityId: adset.id,
+          entityLevel: "adset",
+          spend,
+          conversions,
+          daysSinceLastEdit: null, // Would need activities API call
+          inLearningPhase: false, // Would need learning_stage_info field
+        });
+      }
+    } catch {
+      // Gracefully return empty on failure
+    }
+
+    return breakdowns;
   }
 
   // -------------------------------------------------------------------------

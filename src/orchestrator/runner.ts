@@ -4,6 +4,7 @@ import type { AccountConfig } from "../config/types.js";
 import type { MultiPlatformResult, PlatformResult } from "./types.js";
 import { analyzeFunnel } from "../core/analysis/funnel-walker.js";
 import { buildComparisonPeriods } from "../core/analysis/comparator.js";
+import { buildDiagnosticContext } from "../core/analysis/context-builder.js";
 import {
   createPlatformClient,
   resolveFunnel,
@@ -12,6 +13,7 @@ import {
 import { resolveAdvisors } from "../advisors/registry.js";
 import { correlate } from "./correlator.js";
 import { generateExecutiveSummary } from "./summary.js";
+import { generatePortfolioActions } from "./portfolio-actions.js";
 
 // ---------------------------------------------------------------------------
 // Multi-Platform Diagnostic Runner
@@ -58,6 +60,21 @@ export async function runMultiPlatformDiagnostic(
             funnel
           );
 
+        // Build diagnostic context (historical trends, structural data, revenue)
+        const context = await buildDiagnosticContext({
+          client,
+          entityId: platformConfig.entityId,
+          entityLevel,
+          funnel,
+          referenceDate: refDate,
+          periodDays,
+          enableHistorical: platformConfig.enableHistoricalTrends ?? false,
+          historicalPeriods: platformConfig.historicalPeriods ?? 4,
+          enableStructural: platformConfig.enableStructuralAnalysis ?? false,
+          currentSnapshot: current,
+          previousSnapshot: previous,
+        });
+
         // Analyze
         const result = analyzeFunnel({
           funnel,
@@ -66,6 +83,7 @@ export async function runMultiPlatformDiagnostic(
           periods,
           benchmarks,
           advisors,
+          context,
         });
 
         // Tag with platform
@@ -104,11 +122,19 @@ export async function runMultiPlatformDiagnostic(
   const { findings: crossPlatformFindings, budgetRecommendations } =
     correlate(platformResults);
 
+  // Generate portfolio actions
+  const portfolioActions = generatePortfolioActions(
+    platformResults,
+    crossPlatformFindings,
+    budgetRecommendations
+  );
+
   // Generate executive summary
   const executiveSummary = generateExecutiveSummary(
     platformResults,
     crossPlatformFindings,
-    budgetRecommendations
+    budgetRecommendations,
+    portfolioActions
   );
 
   return {
@@ -116,6 +142,7 @@ export async function runMultiPlatformDiagnostic(
     crossPlatformFindings,
     budgetRecommendations,
     executiveSummary,
+    portfolioActions,
   };
 }
 

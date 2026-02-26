@@ -94,6 +94,8 @@ function detectMarketWideSignals(
       message: `CPMs increased across all platforms (avg +${avgChange.toFixed(1)}%). This suggests market-wide competition rather than an account-specific issue.`,
       recommendation:
         "Market-wide CPM increases are typically seasonal (Q4, BFCM) or driven by macro events. Consider temporarily reducing spend until costs normalize, or shift budget to lower-CPM placements/channels that may not be as affected.",
+      confidenceScore: Math.min(avgChange / 60, 1),
+      riskLevel: avgChange > 40 ? "high" : "medium",
     });
   }
 
@@ -138,6 +140,8 @@ function detectHaloEffects(
           platforms: [awarenessResult.platform, conversionResult.platform],
           message: `${awarenessResult.platform} spend increased ${spendChange.toFixed(1)}% and ${conversionResult.platform} conversion costs improved ${kpiDelta.toFixed(1)}%. This may indicate a cross-platform halo effect where ${awarenessResult.platform} awareness is driving ${conversionResult.platform} conversions.`,
           recommendation: `Consider ${awarenessResult.platform} as an awareness driver rather than evaluating it purely on direct CPA. Cross-platform attribution tools can help quantify this lift. Be cautious about cutting ${awarenessResult.platform} spend without monitoring the downstream impact on ${conversionResult.platform}.`,
+          confidenceScore: Math.min((spendChange * Math.abs(kpiDelta)) / 2000, 0.8),
+          riskLevel: "low",
         });
       }
     }
@@ -183,20 +187,40 @@ function detectPlatformConflicts(
       message: `Performance is diverging across platforms: ${improvingNames} KPI improving while ${worseningNames} KPI worsening. This suggests a budget reallocation opportunity.`,
       recommendation:
         "Consider shifting incremental budget from underperforming platforms to those showing improving efficiency. Run this diagnostic again after reallocation to verify the trend holds.",
+      confidenceScore: Math.min(
+        (improving.reduce((sum, p) => sum + Math.abs(p.result.primaryKPI.deltaPercent), 0) +
+          worsening.reduce((sum, p) => sum + Math.abs(p.result.primaryKPI.deltaPercent), 0)) /
+          100,
+        0.9
+      ),
+      riskLevel: "medium",
     });
 
     // Generate specific budget recommendations
     for (const worse of worsening) {
       for (const better of improving) {
+        const shiftPercent = Math.min(
+          Math.round(
+            (Math.abs(worse.result.primaryKPI.deltaPercent) +
+              Math.abs(better.result.primaryKPI.deltaPercent)) /
+              4
+          ),
+          30
+        );
+        const confidence =
+          Math.abs(worse.result.primaryKPI.deltaPercent) > 30 &&
+          Math.abs(better.result.primaryKPI.deltaPercent) > 20
+            ? "high" as const
+            : "medium" as const;
+
         budgetRecommendations.push({
           from: worse.platform,
           to: better.platform,
           reason: `${worse.platform} CPA worsened ${worse.result.primaryKPI.deltaPercent.toFixed(1)}% while ${better.platform} CPA improved ${better.result.primaryKPI.deltaPercent.toFixed(1)}%`,
-          confidence:
-            Math.abs(worse.result.primaryKPI.deltaPercent) > 30 &&
-            Math.abs(better.result.primaryKPI.deltaPercent) > 20
-              ? "high"
-              : "medium",
+          confidence,
+          suggestedShiftPercent: shiftPercent,
+          estimatedKPIImprovement: Math.abs(better.result.primaryKPI.deltaPercent) * 0.5,
+          riskLevel: shiftPercent > 30 ? "high" : shiftPercent > 10 ? "medium" : "low",
         });
       }
     }

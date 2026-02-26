@@ -8,10 +8,18 @@ import {
   leadgenCreativeFatigueAdvisor,
   auctionCompetitionAdvisor,
   leadgenAuctionCompetitionAdvisor,
+  creativeExhaustionAdvisor,
 } from "./shared/index.js";
 
 // Platform-specific advisors
 import { landingPageAdvisor } from "./platform/meta/index.js";
+
+// Structural advisors
+import {
+  adsetFragmentationAdvisor,
+  budgetSkewAdvisor,
+  learningInstabilityAdvisor,
+} from "./structural/index.js";
 
 // Vertical-specific advisors
 import {
@@ -58,6 +66,14 @@ export function resolveAdvisors(
     advisors.push(creativeFatigueAdvisor);
     advisors.push(auctionCompetitionAdvisor);
   }
+
+  // Creative exhaustion advisor (predictive, all platforms/verticals)
+  advisors.push(creativeExhaustionAdvisor);
+
+  // Structural advisors (universal — account structure is platform-agnostic)
+  advisors.push(adsetFragmentationAdvisor);
+  advisors.push(budgetSkewAdvisor);
+  advisors.push(learningInstabilityAdvisor);
 
   // 2. Platform-specific advisors
   if (platform === "meta") {
