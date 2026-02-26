@@ -340,6 +340,23 @@ export class MetaApiClient extends AbstractPlatformClient {
       stages[stage.metric] = { count, cost };
     }
 
+    // Aggregate action_values (revenue data) and ROAS
+    const actionValueTotals: Record<string, number> = {};
+    const roasTotals: Record<string, { total: number; count: number }> = {};
+
+    for (const row of rows) {
+      for (const av of row.action_values ?? []) {
+        actionValueTotals[av.action_type] =
+          (actionValueTotals[av.action_type] ?? 0) + parseFloat(av.value);
+      }
+      for (const roas of row.website_purchase_roas ?? []) {
+        const entry = roasTotals[roas.action_type] ?? { total: 0, count: 0 };
+        entry.total += parseFloat(roas.value);
+        entry.count += 1;
+        roasTotals[roas.action_type] = entry;
+      }
+    }
+
     // Top-level fields
     const topLevel: Record<string, number> = {
       impressions: totalImpressions,
@@ -354,6 +371,29 @@ export class MetaApiClient extends AbstractPlatformClient {
     }
     if (totalInlineClicks > 0) {
       topLevel.cpc = totalSpend / totalInlineClicks;
+    }
+
+    // Revenue-related fields from action_values
+    for (const [actionType, value] of Object.entries(actionValueTotals)) {
+      // Map common action_value types to recognizable topLevel keys
+      if (actionType === "offsite_conversion.fb_pixel_purchase") {
+        topLevel.purchase_value = value;
+        topLevel.conversions_value = (topLevel.conversions_value ?? 0) + value;
+      } else if (actionType === "omni_purchase") {
+        topLevel.omni_purchase_value = value;
+        topLevel.conversions_value = (topLevel.conversions_value ?? 0) + value;
+      } else if (actionType === "offsite_conversion.fb_pixel_complete_payment") {
+        topLevel.complete_payment_value = value;
+        topLevel.conversions_value = (topLevel.conversions_value ?? 0) + value;
+      } else {
+        // Store all action_values for downstream use
+        topLevel[`action_value_${actionType}`] = value;
+      }
+    }
+
+    // ROAS data
+    for (const [actionType, { total, count }] of Object.entries(roasTotals)) {
+      topLevel[`roas_${actionType}`] = total / count;
     }
 
     return {
