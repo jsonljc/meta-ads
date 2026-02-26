@@ -33,6 +33,7 @@ const INSIGHTS_FIELDS = [
   "cpc",
   "cpm",
   "ctr",
+  "frequency",
   "actions",
   "cost_per_action_type",
   "action_values",
@@ -187,6 +188,7 @@ export class MetaApiClient extends AbstractPlatformClient {
           conversions,
           daysSinceLastEdit: null, // Would need activities API call
           inLearningPhase: false, // Would need learning_stage_info field
+          dailyBudget: adset.daily_budget ? parseFloat(adset.daily_budget) / 100 : null,
         });
       }
     } catch {
@@ -285,12 +287,18 @@ export class MetaApiClient extends AbstractPlatformClient {
     let totalImpressions = 0;
     let totalClicks = 0;
     let totalInlineClicks = 0;
+    let weightedFrequency = 0;
 
     for (const row of rows) {
       totalSpend += parseFloat(row.spend || "0");
       totalImpressions += parseInt(row.impressions || "0", 10);
       totalClicks += parseInt(row.clicks || "0", 10);
       totalInlineClicks += parseInt(row.inline_link_clicks || "0", 10);
+
+      // Frequency is impression-weighted across rows
+      const rowImpressions = parseInt(row.impressions || "0", 10);
+      const rowFrequency = parseFloat(row.frequency || "0");
+      weightedFrequency += rowFrequency * rowImpressions;
 
       for (const action of row.actions ?? []) {
         actionTotals[action.action_type] =
@@ -371,6 +379,9 @@ export class MetaApiClient extends AbstractPlatformClient {
     }
     if (totalInlineClicks > 0) {
       topLevel.cpc = totalSpend / totalInlineClicks;
+    }
+    if (totalImpressions > 0 && weightedFrequency > 0) {
+      topLevel.frequency = weightedFrequency / totalImpressions;
     }
 
     // Revenue-related fields from action_values

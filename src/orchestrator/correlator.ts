@@ -5,6 +5,7 @@ import type {
   BudgetRecommendation,
   PlatformResult,
 } from "./types.js";
+import { getActiveSeasonalEvent } from "../core/analysis/seasonality.js";
 
 // ---------------------------------------------------------------------------
 // Cross-Platform Correlator
@@ -87,16 +88,43 @@ function detectMarketWideSignals(
   ) {
     const avgChange =
       cpmChanges.reduce((sum, c) => sum + c.change, 0) / cpmChanges.length;
-    findings.push({
-      signal: "market_wide_cpm_increase",
-      severity: avgChange > 40 ? "critical" : "warning",
-      platforms: cpmChanges.map((c) => c.platform),
-      message: `CPMs increased across all platforms (avg +${avgChange.toFixed(1)}%). This suggests market-wide competition rather than an account-specific issue.`,
-      recommendation:
-        "Market-wide CPM increases are typically seasonal (Q4, BFCM) or driven by macro events. Consider temporarily reducing spend until costs normalize, or shift budget to lower-CPM placements/channels that may not be as affected.",
-      confidenceScore: Math.min(avgChange / 60, 1),
-      riskLevel: avgChange > 40 ? "high" : "medium",
-    });
+
+    // Check for seasonal events that would explain CPM increases
+    const periodStart = results[0].result.periods.current.since;
+    const periodEnd = results[0].result.periods.current.until;
+    const seasonalEvent = getActiveSeasonalEvent(periodStart, periodEnd);
+
+    // Adjust threshold by seasonal multiplier
+    const effectiveThreshold = seasonalEvent
+      ? 15 * seasonalEvent.cpmThresholdMultiplier
+      : 15;
+
+    // If the CPM increase is within seasonal norms, suppress or downgrade
+    if (seasonalEvent && avgChange <= effectiveThreshold) {
+      findings.push({
+        signal: "market_wide_cpm_increase",
+        severity: "info",
+        platforms: cpmChanges.map((c) => c.platform),
+        message: `CPMs increased across all platforms (avg +${avgChange.toFixed(1)}%) during ${seasonalEvent.name}. This is within expected seasonal ranges.`,
+        recommendation:
+          `CPM increases during ${seasonalEvent.name} are normal due to heightened advertiser competition. Maintain current strategy unless increases significantly exceed seasonal norms. Focus on conversion rate optimization rather than fighting auction costs.`,
+        confidenceScore: Math.min(avgChange / 60, 1),
+        riskLevel: "low",
+      });
+    } else {
+      findings.push({
+        signal: "market_wide_cpm_increase",
+        severity: avgChange > 40 ? "critical" : "warning",
+        platforms: cpmChanges.map((c) => c.platform),
+        message: seasonalEvent
+          ? `CPMs increased across all platforms (avg +${avgChange.toFixed(1)}%) during ${seasonalEvent.name}, exceeding expected seasonal ranges.`
+          : `CPMs increased across all platforms (avg +${avgChange.toFixed(1)}%). This suggests market-wide competition rather than an account-specific issue.`,
+        recommendation:
+          "Market-wide CPM increases are typically seasonal (Q4, BFCM) or driven by macro events. Consider temporarily reducing spend until costs normalize, or shift budget to lower-CPM placements/channels that may not be as affected.",
+        confidenceScore: Math.min(avgChange / 60, 1),
+        riskLevel: avgChange > 40 ? "high" : "medium",
+      });
+    }
   }
 
   return findings;

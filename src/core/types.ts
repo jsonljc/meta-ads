@@ -83,6 +83,43 @@ export interface SubEntityBreakdown {
   conversions: number;
   daysSinceLastEdit: number | null;
   inLearningPhase: boolean;
+  /** Daily budget allocated to this entity (null if not available or using lifetime budget) */
+  dailyBudget: number | null;
+}
+
+/** Breakdown of performance by placement */
+export interface PlacementBreakdown {
+  placement: string;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  conversions: number;
+  cpa: number | null;
+  cpm: number | null;
+}
+
+/** Breakdown of ad-level performance within an ad set */
+export interface AdBreakdown {
+  adId: string;
+  adSetId: string;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  conversions: number;
+  cpa: number | null;
+  ctr: number | null;
+  /** Ad format (image, video, carousel, etc.) */
+  format: string | null;
+}
+
+/** Daily performance snapshot for intra-week analysis */
+export interface DailyBreakdown {
+  date: string; // YYYY-MM-DD
+  dayOfWeek: number; // 0=Sunday, 6=Saturday
+  spend: number;
+  impressions: number;
+  clicks: number;
+  conversions: number;
 }
 
 export interface DiagnosticContext {
@@ -93,6 +130,14 @@ export interface DiagnosticContext {
     totalRevenue: number;
     previousTotalRevenue: number;
   };
+  /** Placement-level breakdown for the current period */
+  placementBreakdowns?: PlacementBreakdown[];
+  /** Ad-level breakdowns grouped by ad set */
+  adBreakdowns?: AdBreakdown[];
+  /** Daily performance breakdowns for the current period */
+  dailyBreakdowns?: DailyBreakdown[];
+  /** Daily performance breakdowns for the previous period */
+  previousDailyBreakdowns?: DailyBreakdown[];
 }
 
 export interface EconomicImpact {

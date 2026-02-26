@@ -10,14 +10,17 @@ import {
   leadgenFunnel as metaLeadgenFunnel,
   createLeadgenFunnel as createMetaLeadgenFunnel,
 } from "./meta/funnels/leadgen.js";
+import { brandFunnel as metaBrandFunnel } from "./meta/funnels/brand.js";
 
 // Google funnels
 import { commerceFunnel as googleCommerceFunnel } from "./google/funnels/commerce.js";
 import { leadgenFunnel as googleLeadgenFunnel } from "./google/funnels/leadgen.js";
+import { brandFunnel as googleBrandFunnel } from "./google/funnels/brand.js";
 
 // TikTok funnels
 import { commerceFunnel as tiktokCommerceFunnel } from "./tiktok/funnels/commerce.js";
 import { leadgenFunnel as tiktokLeadgenFunnel } from "./tiktok/funnels/leadgen.js";
+import { brandFunnel as tiktokBrandFunnel } from "./tiktok/funnels/brand.js";
 
 // Benchmarks (platform-agnostic defaults)
 import { commerceBenchmarks } from "../verticals/commerce/benchmarks.js";
@@ -25,6 +28,7 @@ import {
   leadgenBenchmarks,
   createLeadgenBenchmarks,
 } from "../verticals/leadgen/benchmarks.js";
+import { brandBenchmarks } from "../verticals/brand/benchmarks.js";
 
 // ---------------------------------------------------------------------------
 // Client factory
@@ -90,6 +94,17 @@ export function resolveFunnel(
     }
   }
 
+  if (vertical === "brand") {
+    switch (platform) {
+      case "meta":
+        return metaBrandFunnel;
+      case "google":
+        return googleBrandFunnel;
+      case "tiktok":
+        return tiktokBrandFunnel;
+    }
+  }
+
   throw new Error(
     `No funnel schema for platform "${platform}" + vertical "${vertical}"`
   );
@@ -111,6 +126,8 @@ export function resolveBenchmarks(
       return options?.qualifiedLeadActionType
         ? createLeadgenBenchmarks(options.qualifiedLeadActionType)
         : leadgenBenchmarks;
+    case "brand":
+      return brandBenchmarks;
     default:
       throw new Error(`No benchmarks for vertical "${vertical}"`);
   }

@@ -141,6 +141,7 @@ export class GoogleAdsClient extends AbstractPlatformClient {
           conversions,
           daysSinceLastEdit: null, // Not available via Google Ads API easily
           inLearningPhase: false, // No Google equivalent
+          dailyBudget: null, // Would need campaign_budget.amount_micros
         });
       }
     } catch {
