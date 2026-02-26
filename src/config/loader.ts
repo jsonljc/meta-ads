@@ -47,6 +47,9 @@ function resolveConfig(raw: RawAccountConfig): AccountConfig {
     entityId: p.entityId,
     entityLevel: p.entityLevel,
     qualifiedLeadActionType: p.qualifiedLeadActionType,
+    enableStructuralAnalysis: p.enableStructuralAnalysis,
+    enableHistoricalTrends: p.enableHistoricalTrends,
+    historicalPeriods: p.historicalPeriods,
     credentials: resolveCredentials(p.platform, p.credentials),
   }));
 

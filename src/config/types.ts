@@ -50,6 +50,9 @@ export interface RawAccountConfig {
     entityId: string;
     entityLevel?: EntityLevel;
     qualifiedLeadActionType?: string;
+    enableStructuralAnalysis?: boolean;
+    enableHistoricalTrends?: boolean;
+    historicalPeriods?: number;
     credentials: Record<string, string>;
   }>;
   periodDays?: number;

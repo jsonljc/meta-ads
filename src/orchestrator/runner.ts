@@ -1,5 +1,4 @@
 import type { EntityLevel } from "../core/types.js";
-import type { PlatformType } from "../platforms/types.js";
 import type { AccountConfig } from "../config/types.js";
 import type { MultiPlatformResult, PlatformResult } from "./types.js";
 import { analyzeFunnel } from "../core/analysis/funnel-walker.js";
@@ -104,15 +103,16 @@ export async function runMultiPlatformDiagnostic(
     });
 
   // Run all platforms in parallel — one failing doesn't block others
+  const enabledPlatforms = config.platforms.filter((p) => p.enabled !== false);
   const settled = await Promise.allSettled(tasks);
 
-  const platformResults: PlatformResult[] = settled.map((s) => {
+  const platformResults: PlatformResult[] = settled.map((s, index) => {
     if (s.status === "fulfilled") {
       return s.value;
     }
     // This shouldn't happen since we catch inside the task, but handle it
     return {
-      platform: "meta" as PlatformType,
+      platform: enabledPlatforms[index].platform,
       status: "error" as const,
       error: s.reason instanceof Error ? s.reason.message : String(s.reason),
     };

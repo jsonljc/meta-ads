@@ -68,10 +68,13 @@ export function analyzeFunnel(options: FunnelWalkerOptions): DiagnosticResult {
     }
 
     // Annotate dropoffs with economic impact
-    const lastStage = funnel.stages[funnel.stages.length - 1];
-    const expectedConversions = previous.stages[lastStage?.metric]?.count ?? 0;
+    // Use per-dropoff from-stage count as baseline, not a shared bottom-of-funnel count
     for (const dropoff of dropoffs) {
-      dropoff.economicImpact = computeDropoffEconomicImpact(dropoff, expectedConversions, aov);
+      const fromStageSchema = funnel.stages.find((s) => s.name === dropoff.fromStage);
+      const expectedFromCount = fromStageSchema
+        ? (previous.stages[fromStageSchema.metric]?.count ?? 0)
+        : 0;
+      dropoff.economicImpact = computeDropoffEconomicImpact(dropoff, expectedFromCount, aov);
     }
 
     // Build elasticity ranking
@@ -86,8 +89,13 @@ export function analyzeFunnel(options: FunnelWalkerOptions): DiagnosticResult {
     (s) => s.metric === funnel.primaryKPI || s.costMetric === funnel.primaryKPI
   );
   const primaryMetric = funnel.primaryKPI;
-  const currentKPI = current.stages[primaryMetric]?.cost ?? 0;
-  const previousKPI = previous.stages[primaryMetric]?.cost ?? 0;
+  const currentCost = current.stages[primaryMetric]?.cost;
+  const previousCost = previous.stages[primaryMetric]?.cost;
+  // Use cost if available on either period; fall back to count-based comparison
+  const hasCostData = currentCost !== null && currentCost !== undefined
+    && previousCost !== null && previousCost !== undefined;
+  const currentKPI = hasCostData ? currentCost : (current.stages[primaryMetric]?.count ?? 0);
+  const previousKPI = hasCostData ? previousCost : (previous.stages[primaryMetric]?.count ?? 0);
   const kpiDelta = percentChange(currentKPI, previousKPI);
 
   const primaryKPI = {
@@ -95,7 +103,7 @@ export function analyzeFunnel(options: FunnelWalkerOptions): DiagnosticResult {
     current: currentKPI,
     previous: previousKPI,
     deltaPercent: kpiDelta,
-    severity: classifySeverity(kpiDelta, current.spend, true),
+    severity: classifySeverity(kpiDelta, current.spend, hasCostData),
   };
 
   // 6. Generate findings — start with generic, then vertical-specific advisors
@@ -283,18 +291,30 @@ function generateGenericFindings(
   const findings: Finding[] = [];
 
   // Primary KPI summary
-  if (primaryKPI.severity === "healthy") {
+  const kpiFormatted = primaryKPI.current > 0 && primaryKPI.previous > 0;
+  if (primaryKPI.current === 0 && primaryKPI.previous === 0) {
+    findings.push({
+      severity: "info",
+      stage: primaryKPI.name,
+      message: `No ${primaryKPI.name} conversions recorded in either period.`,
+      recommendation: "Verify tracking is configured correctly or that the campaign has sufficient spend to generate conversions.",
+    });
+  } else if (primaryKPI.severity === "healthy") {
     findings.push({
       severity: "healthy",
       stage: primaryKPI.name,
-      message: `${primaryKPI.name} is stable at $${primaryKPI.current.toFixed(2)} (${primaryKPI.deltaPercent > 0 ? "+" : ""}${primaryKPI.deltaPercent.toFixed(1)}% WoW).`,
+      message: kpiFormatted
+        ? `${primaryKPI.name} is stable at $${primaryKPI.current.toFixed(2)} (${primaryKPI.deltaPercent > 0 ? "+" : ""}${primaryKPI.deltaPercent.toFixed(1)}% WoW).`
+        : `${primaryKPI.name} is stable (${primaryKPI.deltaPercent > 0 ? "+" : ""}${primaryKPI.deltaPercent.toFixed(1)}% WoW).`,
       recommendation: null,
     });
   } else {
     findings.push({
       severity: primaryKPI.severity,
       stage: primaryKPI.name,
-      message: `${primaryKPI.name} cost increased to $${primaryKPI.current.toFixed(2)} (${primaryKPI.deltaPercent > 0 ? "+" : ""}${primaryKPI.deltaPercent.toFixed(1)}% WoW).`,
+      message: kpiFormatted
+        ? `${primaryKPI.name} cost changed to $${primaryKPI.current.toFixed(2)} (${primaryKPI.deltaPercent > 0 ? "+" : ""}${primaryKPI.deltaPercent.toFixed(1)}% WoW).`
+        : `${primaryKPI.name} changed: ${primaryKPI.previous} → ${primaryKPI.current} (${primaryKPI.deltaPercent > 0 ? "+" : ""}${primaryKPI.deltaPercent.toFixed(1)}% WoW).`,
       recommendation: null,
     });
   }
