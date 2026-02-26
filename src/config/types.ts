@@ -24,6 +24,8 @@ export interface PlatformAccountConfig {
   enableHistoricalTrends?: boolean;
   /** Number of trailing periods for historical analysis (default: 4) */
   historicalPeriods?: number;
+  /** Target ROAS for efficiency comparison (e.g. 4.0 = $4 revenue per $1 spent) */
+  targetROAS?: number;
 }
 
 /** Top-level account configuration for multi-platform diagnostics */

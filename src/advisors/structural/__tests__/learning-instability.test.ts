@@ -26,6 +26,7 @@ function makeEntity(overrides: Partial<SubEntityBreakdown> = {}): SubEntityBreak
     conversions: 10,
     daysSinceLastEdit: null,
     inLearningPhase: false,
+    dailyBudget: null,
     ...overrides,
   };
 }

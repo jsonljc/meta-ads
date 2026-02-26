@@ -17,6 +17,7 @@ export interface MetaInsightsRow {
   cpc?: string;
   cpm?: string;
   ctr?: string;
+  frequency?: string;
   actions?: MetaActionValue[];
   cost_per_action_type?: MetaActionValue[];
   action_values?: MetaActionValue[];

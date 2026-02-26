@@ -159,6 +159,7 @@ export class TikTokAdsClient extends AbstractPlatformClient {
           conversions,
           daysSinceLastEdit: null,
           inLearningPhase: false, // Would need separate adgroup GET call
+          dailyBudget: null, // Would need separate adgroup GET call
         });
       }
     } catch {

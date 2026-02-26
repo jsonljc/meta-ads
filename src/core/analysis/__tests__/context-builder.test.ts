@@ -196,8 +196,8 @@ describe("buildDiagnosticContext", () => {
 
   it("fetches sub-entity breakdowns when enableStructural and client supports it", async () => {
     const mockBreakdowns = [
-      { entityId: "adset_1", entityLevel: "adset" as const, spend: 500, conversions: 20, daysSinceLastEdit: null, inLearningPhase: false },
-      { entityId: "adset_2", entityLevel: "adset" as const, spend: 500, conversions: 30, daysSinceLastEdit: null, inLearningPhase: false },
+      { entityId: "adset_1", entityLevel: "adset" as const, spend: 500, conversions: 20, daysSinceLastEdit: null, inLearningPhase: false, dailyBudget: null },
+      { entityId: "adset_2", entityLevel: "adset" as const, spend: 500, conversions: 30, daysSinceLastEdit: null, inLearningPhase: false, dailyBudget: null },
     ];
 
     const client = makeMockClient([]);

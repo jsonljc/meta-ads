@@ -9,6 +9,11 @@ import {
   auctionCompetitionAdvisor,
   leadgenAuctionCompetitionAdvisor,
   creativeExhaustionAdvisor,
+  roasEfficiencyAdvisor,
+  marginalEfficiencyAdvisor,
+  audienceSaturationAdvisor,
+  placementEfficiencyAdvisor,
+  dayOfWeekAdvisor,
 } from "./shared/index.js";
 
 // Platform-specific advisors
@@ -19,6 +24,8 @@ import {
   adsetFragmentationAdvisor,
   budgetSkewAdvisor,
   learningInstabilityAdvisor,
+  budgetPacingAdvisor,
+  creativeDiversityAdvisor,
 } from "./structural/index.js";
 
 // Vertical-specific advisors
@@ -31,6 +38,11 @@ import {
   formConversionAdvisor,
   qualifiedCostAdvisor,
 } from "./vertical/leadgen/index.js";
+import {
+  reachSaturationAdvisor,
+  frequencyManagementAdvisor,
+  videoCompletionAdvisor,
+} from "./vertical/brand/index.js";
 
 // ---------------------------------------------------------------------------
 // Advisor Registry
@@ -70,10 +82,27 @@ export function resolveAdvisors(
   // Creative exhaustion advisor (predictive, all platforms/verticals)
   advisors.push(creativeExhaustionAdvisor);
 
+  // ROAS efficiency advisor (commerce only — leadgen doesn't have ROAS)
+  if (vertical === "commerce") {
+    advisors.push(roasEfficiencyAdvisor);
+  }
+
+  // Marginal efficiency advisor (all platforms/verticals)
+  advisors.push(marginalEfficiencyAdvisor);
+
+  // Audience saturation advisor (all platforms/verticals)
+  advisors.push(audienceSaturationAdvisor);
+
   // Structural advisors (universal — account structure is platform-agnostic)
   advisors.push(adsetFragmentationAdvisor);
   advisors.push(budgetSkewAdvisor);
   advisors.push(learningInstabilityAdvisor);
+  advisors.push(budgetPacingAdvisor);
+  advisors.push(creativeDiversityAdvisor);
+
+  // Context-enrichment advisors (require additional breakdowns)
+  advisors.push(placementEfficiencyAdvisor);
+  advisors.push(dayOfWeekAdvisor);
 
   // 2. Platform-specific advisors
   if (platform === "meta") {
@@ -97,6 +126,11 @@ export function resolveAdvisors(
     advisors.push(leadQualityAdvisor);
     advisors.push(formConversionAdvisor);
     advisors.push(qualifiedCostAdvisor);
+  } else if (vertical === "brand") {
+    // Brand-specific advisors for reach, frequency, and video completion
+    advisors.push(reachSaturationAdvisor);
+    advisors.push(frequencyManagementAdvisor);
+    advisors.push(videoCompletionAdvisor);
   }
 
   return advisors;
