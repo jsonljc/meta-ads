@@ -1,5 +1,6 @@
 import { analyzeFunnel } from "../core/analysis/funnel-walker.js";
 import { buildComparisonPeriods } from "../core/analysis/comparator.js";
+import { buildDiagnosticContext } from "../core/analysis/context-builder.js";
 import {
   createPlatformClient,
   resolveFunnel,
@@ -51,6 +52,12 @@ export interface FunnelDiagnosticInput {
    * Ignored for non-leadgen verticals.
    */
   qualifiedLeadActionType?: string;
+  /** Enable historical trend analysis for creative exhaustion detection */
+  enableHistoricalTrends?: boolean;
+  /** Number of trailing periods for historical analysis (default: 4) */
+  historicalPeriods?: number;
+  /** Enable structural analysis (sub-entity breakdowns) */
+  enableStructuralAnalysis?: boolean;
 }
 
 export async function runFunnelDiagnostic(
@@ -65,6 +72,9 @@ export async function runFunnelDiagnostic(
     periodDays = 7,
     referenceDate,
     qualifiedLeadActionType,
+    enableHistoricalTrends = false,
+    historicalPeriods = 4,
+    enableStructuralAnalysis = false,
   } = input;
 
   // Resolve platform config via registry
@@ -89,6 +99,21 @@ export async function runFunnelDiagnostic(
     funnel
   );
 
+  // Build diagnostic context
+  const context = await buildDiagnosticContext({
+    client,
+    entityId,
+    entityLevel,
+    funnel,
+    referenceDate: refDate,
+    periodDays,
+    enableHistorical: enableHistoricalTrends,
+    historicalPeriods,
+    enableStructural: enableStructuralAnalysis,
+    currentSnapshot: current,
+    previousSnapshot: previous,
+  });
+
   // Analyze
   const result = analyzeFunnel({
     funnel,
@@ -97,6 +122,7 @@ export async function runFunnelDiagnostic(
     periods,
     benchmarks,
     advisors,
+    context,
   });
 
   // Tag with platform
@@ -159,6 +185,21 @@ export function formatDiagnostic(result: DiagnosticResult): string {
     lines.push(
       `### Bottleneck: ${result.bottleneck.stageName} (${result.bottleneck.deltaPercent.toFixed(1)}% drop)`
     );
+    lines.push("");
+  }
+
+  // Economic Impact
+  if (result.elasticity && result.elasticity.impactRanking.length > 0) {
+    lines.push("### Economic Impact");
+    lines.push(
+      `Estimated total revenue loss: $${Math.abs(result.elasticity.totalEstimatedRevenueLoss).toFixed(0)}/period`
+    );
+    for (const entry of result.elasticity.impactRanking) {
+      const icon = severityIcon(entry.severity);
+      lines.push(
+        `- ${entry.stage}: $${Math.abs(entry.estimatedRevenueDelta).toFixed(0)} ${icon}`
+      );
+    }
     lines.push("");
   }
 

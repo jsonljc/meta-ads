@@ -1,4 +1,4 @@
-import type { MultiPlatformResult, PlatformResult } from "./types.js";
+import type { MultiPlatformResult, PlatformResult, PortfolioAction } from "./types.js";
 
 // ---------------------------------------------------------------------------
 // Executive Summary Generator
@@ -9,7 +9,8 @@ import type { MultiPlatformResult, PlatformResult } from "./types.js";
 export function generateExecutiveSummary(
   platforms: PlatformResult[],
   crossPlatformFindings: MultiPlatformResult["crossPlatformFindings"],
-  budgetRecommendations: MultiPlatformResult["budgetRecommendations"]
+  budgetRecommendations: MultiPlatformResult["budgetRecommendations"],
+  portfolioActions?: PortfolioAction[]
 ): string {
   const lines: string[] = [];
   lines.push("## Multi-Platform Diagnostic Summary");
@@ -88,8 +89,27 @@ export function generateExecutiveSummary(
     lines.push("### Budget Recommendations");
     for (const rec of budgetRecommendations) {
       const confidence = `[${rec.confidence}]`;
+      const shift = rec.suggestedShiftPercent
+        ? ` (shift ~${rec.suggestedShiftPercent}%)`
+        : "";
       lines.push(
-        `${confidence} Consider shifting budget from ${rec.from} → ${rec.to}: ${rec.reason}`
+        `${confidence} Consider shifting budget from ${rec.from} → ${rec.to}${shift}: ${rec.reason}`
+      );
+    }
+    lines.push("");
+  }
+
+  // Portfolio actions
+  if (portfolioActions && portfolioActions.length > 0) {
+    lines.push("### Portfolio Actions (Ranked)");
+    for (const action of portfolioActions) {
+      const risk = `[${action.riskLevel.toUpperCase()} RISK]`;
+      const confidence = `${(action.confidenceScore * 100).toFixed(0)}% confidence`;
+      const revenue = action.estimatedRevenueRecovery > 0
+        ? ` — est. $${action.estimatedRevenueRecovery.toFixed(0)} recovery`
+        : "";
+      lines.push(
+        `${action.priority}. ${risk} ${action.action} (${confidence}${revenue})`
       );
     }
     lines.push("");

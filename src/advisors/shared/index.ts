@@ -9,3 +9,5 @@ export {
   leadgenAuctionCompetitionAdvisor,
   createAuctionCompetitionAdvisor,
 } from "./auction-competition.js";
+
+export { creativeExhaustionAdvisor } from "./creative-exhaustion.js";

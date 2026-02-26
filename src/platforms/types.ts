@@ -2,6 +2,7 @@ import type {
   EntityLevel,
   FunnelSchema,
   MetricSnapshot,
+  SubEntityBreakdown,
   TimeRange,
   VerticalBenchmarks,
   VerticalType,
@@ -35,6 +36,14 @@ export interface PlatformClient {
     previous: TimeRange,
     funnel: FunnelSchema
   ): Promise<{ current: MetricSnapshot; previous: MetricSnapshot }>;
+
+  /** Optional: fetch sub-entity (ad set / ad group) breakdowns for structural analysis */
+  fetchSubEntityBreakdowns?(
+    entityId: string,
+    entityLevel: EntityLevel,
+    timeRange: TimeRange,
+    funnel: FunnelSchema
+  ): Promise<SubEntityBreakdown[]>;
 }
 
 // ---------------------------------------------------------------------------

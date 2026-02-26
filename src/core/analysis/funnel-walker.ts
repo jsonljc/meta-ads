@@ -8,8 +8,14 @@ import type {
   Finding,
   Severity,
   VerticalBenchmarks,
+  DiagnosticContext,
 } from "../types.js";
 import { percentChange, isSignificantChange } from "./significance.js";
+import {
+  computeStageEconomicImpact,
+  computeDropoffEconomicImpact,
+  buildElasticityRanking,
+} from "./economic-impact.js";
 
 // ---------------------------------------------------------------------------
 // Generic Funnel Walker
@@ -23,7 +29,8 @@ export type FindingAdvisor = (
   stageAnalysis: StageDiagnostic[],
   dropoffs: FunnelDropoff[],
   current: MetricSnapshot,
-  previous: MetricSnapshot
+  previous: MetricSnapshot,
+  context?: DiagnosticContext
 ) => Finding[];
 
 export interface FunnelWalkerOptions {
@@ -34,10 +41,12 @@ export interface FunnelWalkerOptions {
   benchmarks?: VerticalBenchmarks;
   /** Vertical-specific advisors that generate findings */
   advisors?: FindingAdvisor[];
+  /** Diagnostic context for structural/historical analysis */
+  context?: DiagnosticContext;
 }
 
 export function analyzeFunnel(options: FunnelWalkerOptions): DiagnosticResult {
-  const { funnel, current, previous, periods, benchmarks, advisors } = options;
+  const { funnel, current, previous, periods, benchmarks, advisors, context } = options;
 
   // 1. Per-stage WoW analysis
   const stageAnalysis = analyzeStages(funnel, current, previous, benchmarks);
@@ -45,10 +54,34 @@ export function analyzeFunnel(options: FunnelWalkerOptions): DiagnosticResult {
   // 2. Drop-off rates between adjacent stages
   const dropoffs = analyzeDropoffs(funnel, current, previous);
 
-  // 3. Find the bottleneck — stage with worst significant degradation
-  const bottleneck = findBottleneck(stageAnalysis);
+  // 3. Compute economic impact when revenue data is available
+  let elasticity: DiagnosticResult["elasticity"];
+  if (context?.revenueData) {
+    const aov = context.revenueData.averageOrderValue;
 
-  // 4. Primary KPI summary
+    // Annotate stages with economic impact
+    for (const stage of stageAnalysis) {
+      const isBottomOfFunnel =
+        stage.metric === funnel.primaryKPI ||
+        stage.metric === funnel.stages[funnel.stages.length - 1]?.metric;
+      stage.economicImpact = computeStageEconomicImpact(stage, aov, isBottomOfFunnel);
+    }
+
+    // Annotate dropoffs with economic impact
+    const lastStage = funnel.stages[funnel.stages.length - 1];
+    const expectedConversions = previous.stages[lastStage?.metric]?.count ?? 0;
+    for (const dropoff of dropoffs) {
+      dropoff.economicImpact = computeDropoffEconomicImpact(dropoff, expectedConversions, aov);
+    }
+
+    // Build elasticity ranking
+    elasticity = buildElasticityRanking(stageAnalysis);
+  }
+
+  // 4. Find the bottleneck — prefer economic impact ranking when available
+  const bottleneck = findBottleneck(stageAnalysis, elasticity);
+
+  // 5. Primary KPI summary
   const primaryStage = funnel.stages.find(
     (s) => s.metric === funnel.primaryKPI || s.costMetric === funnel.primaryKPI
   );
@@ -65,7 +98,7 @@ export function analyzeFunnel(options: FunnelWalkerOptions): DiagnosticResult {
     severity: classifySeverity(kpiDelta, current.spend, true),
   };
 
-  // 5. Generate findings — start with generic, then vertical-specific advisors
+  // 6. Generate findings — start with generic, then vertical-specific advisors
   const findings: Finding[] = generateGenericFindings(
     stageAnalysis,
     dropoffs,
@@ -75,7 +108,7 @@ export function analyzeFunnel(options: FunnelWalkerOptions): DiagnosticResult {
 
   if (advisors) {
     for (const advisor of advisors) {
-      findings.push(...advisor(stageAnalysis, dropoffs, current, previous));
+      findings.push(...advisor(stageAnalysis, dropoffs, current, previous, context));
     }
   }
 
@@ -100,6 +133,7 @@ export function analyzeFunnel(options: FunnelWalkerOptions): DiagnosticResult {
     dropoffs,
     bottleneck,
     findings,
+    elasticity,
   };
 }
 
@@ -184,8 +218,19 @@ function analyzeDropoffs(
 // ---------------------------------------------------------------------------
 
 function findBottleneck(
-  stageAnalysis: StageDiagnostic[]
+  stageAnalysis: StageDiagnostic[],
+  elasticity?: DiagnosticResult["elasticity"]
 ): StageDiagnostic | null {
+  // When economic impact data is available, prefer the stage with the worst
+  // revenue impact rather than the worst percentage drop
+  if (elasticity && elasticity.impactRanking.length > 0) {
+    const topImpactStage = elasticity.impactRanking[0].stage;
+    const match = stageAnalysis.find((s) => s.stageName === topImpactStage);
+    if (match && match.isSignificant && match.deltaPercent < 0) {
+      return match;
+    }
+  }
+
   let worst: StageDiagnostic | null = null;
 
   for (const stage of stageAnalysis) {

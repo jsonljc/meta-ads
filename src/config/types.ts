@@ -18,6 +18,12 @@ export interface PlatformAccountConfig {
   entityLevel?: EntityLevel;
   /** For Meta leadgen: custom qualified lead action type */
   qualifiedLeadActionType?: string;
+  /** Enable structural analysis (sub-entity breakdowns) */
+  enableStructuralAnalysis?: boolean;
+  /** Enable historical trend analysis for creative exhaustion detection */
+  enableHistoricalTrends?: boolean;
+  /** Number of trailing periods for historical analysis (default: 4) */
+  historicalPeriods?: number;
 }
 
 /** Top-level account configuration for multi-platform diagnostics */

@@ -73,6 +73,35 @@ export interface ComparisonPeriods {
 }
 
 // ---------------------------------------------------------------------------
+// Sub-entity and diagnostic context
+// ---------------------------------------------------------------------------
+
+export interface SubEntityBreakdown {
+  entityId: string;
+  entityLevel: EntityLevel;
+  spend: number;
+  conversions: number;
+  daysSinceLastEdit: number | null;
+  inLearningPhase: boolean;
+}
+
+export interface DiagnosticContext {
+  subEntities?: SubEntityBreakdown[];
+  historicalSnapshots?: MetricSnapshot[];
+  revenueData?: {
+    averageOrderValue: number;
+    totalRevenue: number;
+    previousTotalRevenue: number;
+  };
+}
+
+export interface EconomicImpact {
+  estimatedRevenueDelta: number;
+  conversionDelta: number;
+  revenueImpactPercent: number;
+}
+
+// ---------------------------------------------------------------------------
 // Diagnostic output
 // ---------------------------------------------------------------------------
 
@@ -90,6 +119,8 @@ export interface StageDiagnostic {
   /** Whether this change is statistically meaningful given spend */
   isSignificant: boolean;
   severity: Severity;
+  /** Dollar-denominated impact estimate when revenue data is available */
+  economicImpact?: EconomicImpact;
 }
 
 export interface FunnelDropoff {
@@ -98,6 +129,8 @@ export interface FunnelDropoff {
   currentRate: number;
   previousRate: number;
   deltaPercent: number;
+  /** Dollar-denominated impact estimate when revenue data is available */
+  economicImpact?: EconomicImpact;
 }
 
 export interface DiagnosticResult {
@@ -123,6 +156,11 @@ export interface DiagnosticResult {
   bottleneck: StageDiagnostic | null;
   /** Human-readable diagnosis strings */
   findings: Finding[];
+  /** Funnel elasticity ranking — dollar impact per stage */
+  elasticity?: {
+    totalEstimatedRevenueLoss: number;
+    impactRanking: Array<{ stage: string; estimatedRevenueDelta: number; severity: Severity }>;
+  };
 }
 
 export interface Finding {
