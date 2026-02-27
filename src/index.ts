@@ -147,3 +147,38 @@ export {
 } from "./skills/funnel-diagnostic.js";
 export type { FunnelDiagnosticInput } from "./skills/funnel-diagnostic.js";
 export { formatMultiPlatformDiagnostic } from "./skills/multi-platform-diagnostic.js";
+
+// Cartridge — Switchboard adapter layer
+export { MediaDiagnosticsCartridge } from "./cartridge/index.js";
+export { createMediaDiagnosticsCartridge } from "./cartridge/bootstrap.js";
+export type { BootstrapOptions } from "./cartridge/bootstrap.js";
+export { MEDIA_DIAGNOSTICS_MANIFEST } from "./cartridge/manifest.js";
+export { validateManifest } from "./cartridge/types.js";
+export type {
+  Cartridge,
+  CartridgeManifest,
+  CartridgeContext,
+  ActionType,
+  ActionDefinition,
+  ExecuteResult,
+  RiskInput,
+  RiskExposure,
+  RiskSensitivity,
+  GuardrailConfig,
+  RateLimitConfig,
+  CooldownConfig,
+  PolicyConfig,
+  ConnectionHealth,
+  HealthCheckResult,
+  SessionState,
+  ConnectionState,
+  CapturedSnapshot,
+  ConnectParams,
+  DiagnoseFunnelParams,
+  DiagnosePortfolioParams,
+  FetchSnapshotParams,
+  AnalyzeStructureParams,
+  HealthCheckParams,
+} from "./cartridge/types.js";
+export type { AdPlatformProvider } from "./cartridge/providers/provider.js";
+export { MockProvider, MockPlatformClient } from "./cartridge/providers/mock-provider.js";

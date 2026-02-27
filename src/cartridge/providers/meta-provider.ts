@@ -7,6 +7,7 @@ import type { EntityLevel } from "../../core/types.js";
 import type { ConnectionHealth } from "../types.js";
 import type { AdPlatformProvider } from "./provider.js";
 import { MetaApiClient } from "../../platforms/meta/client.js";
+import { todayISO } from "../utils.js";
 
 export class MetaProvider implements AdPlatformProvider {
   readonly platform = "meta" as const;
@@ -80,8 +81,4 @@ export class MetaProvider implements AdPlatformProvider {
     }
     return new MetaApiClient({ accessToken: credentials.accessToken });
   }
-}
-
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
 }

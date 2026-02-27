@@ -7,6 +7,7 @@ import type { EntityLevel } from "../../core/types.js";
 import type { ConnectionHealth } from "../types.js";
 import type { AdPlatformProvider } from "./provider.js";
 import { TikTokAdsClient } from "../../platforms/tiktok/client.js";
+import { todayISO } from "../utils.js";
 
 export class TikTokProvider implements AdPlatformProvider {
   readonly platform = "tiktok" as const;
@@ -86,8 +87,4 @@ export class TikTokProvider implements AdPlatformProvider {
       appId: credentials.appId,
     });
   }
-}
-
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
 }

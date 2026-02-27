@@ -44,8 +44,16 @@ export interface CartridgeContext {
   credentials?: Record<string, PlatformCredentials>;
   /** Session-level state (connections, cached data) */
   session?: SessionState;
-  /** Any additional context provided by the orchestrator */
-  [key: string]: unknown;
+  /** Resolved funnel schema (set by enrichContext for funnel.diagnose) */
+  resolvedFunnel?: unknown;
+  /** Resolved benchmarks (set by enrichContext for funnel.diagnose) */
+  resolvedBenchmarks?: unknown;
+  /** Resolved platform configs (set by enrichContext for portfolio.diagnose) */
+  resolvedPlatforms?: Array<{ platform: string; funnel: unknown; benchmarks: unknown }>;
+  /** Computed period length in days (set by enrichContext for snapshot.fetch) */
+  periodDays?: number;
+  /** Validation error from enrichContext — blocks execution when set */
+  validationError?: string;
 }
 
 export interface SessionState {

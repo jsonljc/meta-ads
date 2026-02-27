@@ -25,6 +25,7 @@ import { resolveAdvisors } from "../../advisors/registry.js";
 import { correlate } from "../../orchestrator/correlator.js";
 import { generateExecutiveSummary } from "../../orchestrator/summary.js";
 import { generatePortfolioActions } from "../../orchestrator/portfolio-actions.js";
+import { getYesterday } from "../utils.js";
 
 export async function executeDiagnosePortfolio(
   params: DiagnosePortfolioParams,
@@ -203,10 +204,4 @@ export async function executeDiagnosePortfolio(
       undoRecipe: null,
     };
   }
-}
-
-function getYesterday(): Date {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return d;
 }

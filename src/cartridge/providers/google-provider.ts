@@ -7,6 +7,7 @@ import type { EntityLevel } from "../../core/types.js";
 import type { ConnectionHealth } from "../types.js";
 import type { AdPlatformProvider } from "./provider.js";
 import { GoogleAdsClient } from "../../platforms/google/client.js";
+import { todayISO } from "../utils.js";
 
 export class GoogleProvider implements AdPlatformProvider {
   readonly platform = "google" as const;
@@ -92,8 +93,4 @@ export class GoogleProvider implements AdPlatformProvider {
       loginCustomerId: credentials.loginCustomerId,
     });
   }
-}
-
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
 }

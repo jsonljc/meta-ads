@@ -22,6 +22,7 @@ import {
   creativeDiversityAdvisor,
 } from "../../advisors/structural/index.js";
 import { recordDiagnosticRun } from "../context/session.js";
+import { getYesterday } from "../utils.js";
 
 export async function executeAnalyzeStructure(
   params: AnalyzeStructureParams,
@@ -52,7 +53,7 @@ export async function executeAnalyzeStructure(
     const { entityId, vertical, periodDays = 7 } = params;
 
     // Check if client supports sub-entity breakdowns
-    if (typeof (client as any).fetchSubEntityBreakdowns !== "function") {
+    if (typeof client.fetchSubEntityBreakdowns !== "function") {
       return {
         success: false,
         summary: `${params.platform} client does not support sub-entity breakdowns for structural analysis.`,
@@ -82,7 +83,7 @@ export async function executeAnalyzeStructure(
       funnel
     );
 
-    // Fetch sub-entity breakdowns
+    // Fetch sub-entity breakdowns (guard above ensures this exists)
     const subEntities: SubEntityBreakdown[] =
       await client.fetchSubEntityBreakdowns!(
         entityId,
@@ -154,10 +155,4 @@ export async function executeAnalyzeStructure(
       undoRecipe: null,
     };
   }
-}
-
-function getYesterday(): Date {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return d;
 }

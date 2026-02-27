@@ -17,6 +17,7 @@ import { buildComparisonPeriods } from "../../core/analysis/comparator.js";
 import { buildDiagnosticContext } from "../../core/analysis/context-builder.js";
 import { resolveFunnel, resolveBenchmarks } from "../../platforms/registry.js";
 import { resolveAdvisors } from "../../advisors/registry.js";
+import { getYesterday } from "../utils.js";
 import { recordDiagnosticRun } from "../context/session.js";
 
 export async function executeDiagnoseFunnel(
@@ -140,10 +141,4 @@ export async function executeDiagnoseFunnel(
       undoRecipe: null,
     };
   }
-}
-
-function getYesterday(): Date {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return d;
 }
