@@ -24,3 +24,13 @@ export { audienceSaturationAdvisor } from "./audience-saturation.js";
 export { placementEfficiencyAdvisor } from "./placement-efficiency.js";
 
 export { dayOfWeekAdvisor } from "./day-of-week.js";
+
+export { bidStrategyAdvisor } from "./bid-strategy.js";
+
+export { audienceOverlapAdvisor } from "./audience-overlap.js";
+
+export { creativeWinLossAdvisor } from "./creative-win-loss.js";
+
+export { deviceBreakdownAdvisor } from "./device-breakdown.js";
+
+export { attributionAwarenessAdvisor } from "./attribution-awareness.js";

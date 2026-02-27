@@ -122,6 +122,25 @@ export interface DailyBreakdown {
   conversions: number;
 }
 
+/** Audience overlap between two ad sets */
+export interface AudienceOverlapPair {
+  adSetId1: string;
+  adSetId2: string;
+  /** Overlap percentage (0-1) */
+  overlapRate: number;
+}
+
+/** Device-level performance breakdown */
+export interface DeviceBreakdown {
+  device: string; // "mobile" | "desktop" | "tablet" | "other"
+  spend: number;
+  impressions: number;
+  clicks: number;
+  conversions: number;
+  cpa: number | null;
+  cpm: number | null;
+}
+
 export interface DiagnosticContext {
   subEntities?: SubEntityBreakdown[];
   historicalSnapshots?: MetricSnapshot[];
@@ -138,6 +157,14 @@ export interface DiagnosticContext {
   dailyBreakdowns?: DailyBreakdown[];
   /** Daily performance breakdowns for the previous period */
   previousDailyBreakdowns?: DailyBreakdown[];
+  /** Audience overlap data between ad sets (Meta-only, from delivery estimate API) */
+  audienceOverlaps?: AudienceOverlapPair[];
+  /** Device-level performance breakdowns */
+  deviceBreakdowns?: DeviceBreakdown[];
+  /** Attribution window used in the current period (days) */
+  attributionWindow?: number;
+  /** Attribution window used in the previous period (days) */
+  previousAttributionWindow?: number;
 }
 
 export interface EconomicImpact {

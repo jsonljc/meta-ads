@@ -14,10 +14,16 @@ import {
   audienceSaturationAdvisor,
   placementEfficiencyAdvisor,
   dayOfWeekAdvisor,
+  bidStrategyAdvisor,
+  audienceOverlapAdvisor,
+  creativeWinLossAdvisor,
+  deviceBreakdownAdvisor,
+  attributionAwarenessAdvisor,
 } from "./shared/index.js";
 
 // Platform-specific advisors
 import { landingPageAdvisor } from "./platform/meta/index.js";
+import { googleChannelAdvisor } from "./platform/google/index.js";
 
 // Structural advisors
 import {
@@ -104,6 +110,21 @@ export function resolveAdvisors(
   advisors.push(placementEfficiencyAdvisor);
   advisors.push(dayOfWeekAdvisor);
 
+  // Bid strategy mismatch advisor (all platforms/verticals)
+  advisors.push(bidStrategyAdvisor);
+
+  // Audience overlap advisor (all platforms, most useful on Meta)
+  advisors.push(audienceOverlapAdvisor);
+
+  // Creative win/loss advisor (requires ad-level breakdowns)
+  advisors.push(creativeWinLossAdvisor);
+
+  // Device breakdown advisor (requires device breakdowns)
+  advisors.push(deviceBreakdownAdvisor);
+
+  // Attribution awareness advisor (pre-check for measurement changes)
+  advisors.push(attributionAwarenessAdvisor);
+
   // 2. Platform-specific advisors
   if (platform === "meta") {
     if (vertical === "commerce") {
@@ -111,7 +132,10 @@ export function resolveAdvisors(
       advisors.push(landingPageAdvisor);
     }
   }
-  // Google and TikTok have no platform-specific advisors yet
+  if (platform === "google") {
+    // Google channel allocation advisor (Search vs Display vs Video vs PMax)
+    advisors.push(googleChannelAdvisor);
+  }
 
   // 3. Vertical-specific advisors
   if (vertical === "commerce") {
